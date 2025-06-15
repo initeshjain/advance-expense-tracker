@@ -16,7 +16,7 @@ import { Navbar } from '@/components/Navbar'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import Link from 'next/link'
+import { NavigatingCard } from './NavigatingCard'
 
 interface Expense {
   id: string
@@ -294,7 +294,8 @@ export function Dashboard() {
             </CardContent>
           </Card>
 
-          <Link href="/balances">
+
+          <NavigatingCard to="/balances">
             <Card className="cursor-pointer hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">You Owe</CardTitle>
@@ -307,9 +308,9 @@ export function Dashboard() {
                 </p>
               </CardContent>
             </Card>
-          </Link>
+          </NavigatingCard>
 
-          <Link href="/balances">
+          <NavigatingCard to="/balances">
             <Card className="cursor-pointer hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Owed to You</CardTitle>
@@ -322,7 +323,7 @@ export function Dashboard() {
                 </p>
               </CardContent>
             </Card>
-          </Link>
+          </NavigatingCard>
         </div>
 
         {/* Filters */}

@@ -4,7 +4,6 @@ import { Inter } from 'next/font/google'
 import { NextAuthProvider } from '@/components/providers/NextAuthProvider'
 import { ThemeProvider } from '@/components/providers/ThemeProvider'
 import { Toaster } from '@/components/ui/sonner'
-import TransitionWrapper from '@/components/TransitionWrapper'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -29,7 +28,6 @@ export default function RootLayout({
           // disableTransitionOnChange
           >
             {children}
-            {/* <TransitionWrapper>{children}</TransitionWrapper> */}
             <Toaster />
           </ThemeProvider>
         </NextAuthProvider>
