@@ -28,7 +28,8 @@ export default function RootLayout({
           // enableSystem
           // disableTransitionOnChange
           >
-            <TransitionWrapper>{children}</TransitionWrapper>
+            {children}
+            {/* <TransitionWrapper>{children}</TransitionWrapper> */}
             <Toaster />
           </ThemeProvider>
         </NextAuthProvider>
