@@ -86,21 +86,32 @@ export async function GET() {
         })
 
         // Calculate totals
+        // Total amount the user owes to others
         const totalOwed =
+            // From expense shares
             owedExpenses.reduce((sum, p) => sum + p.shareAmount, 0) +
+
+            // From borrow/lend records where someone lent to the user
             borrowLends
                 .filter(bl =>
-                    bl.borrowLend.type === 'BORROW' &&
-                    bl.borrowLend.createdById === user.id
+                    // Someone else created a LEND or BORROW record, and the user is a participant
+                    bl.userId === user.id &&
+                    (bl.borrowLend.type === 'LEND' || bl.borrowLend.type === 'BORROW')
                 )
                 .reduce((sum, bl) => sum + bl.amount, 0);
 
+        // Total amount others owe the user
         const totalOwedToMe =
+            // From expense shares
             owedToMeExpenses.reduce((sum, p) => sum + p.shareAmount, 0) +
+
+            // From borrow/lend records the user created for others
             borrowLends
                 .filter(bl =>
-                    bl.borrowLend.type === 'LEND' &&
-                    bl.borrowLend.createdById === user.id
+                    // The user created the LEND or BORROW, and the participant is someone else
+                    bl.borrowLend.createdById === user.id &&
+                    bl.userId !== user.id &&
+                    (bl.borrowLend.type === 'LEND' || bl.borrowLend.type === 'BORROW')
                 )
                 .reduce((sum, bl) => sum + bl.amount, 0);
 

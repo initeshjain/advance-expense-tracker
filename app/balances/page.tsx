@@ -458,30 +458,35 @@ export default function BalancesPage() {
         )
     }
 
-    console.log('balances raw:', balances)
-
     const owedGrouped = groupBalancesByPerson(
         balances.owedExpenses.concat(
             balances.borrowLends.filter((bl: any) =>
-                // you created a BORROW, so you owe
-                bl.borrowLend.type === 'BORROW' &&
-                bl.borrowLend.createdBy?.email === session?.user?.email
+                // Case 1: You created a BORROW
+                (bl.borrowLend.type === 'BORROW' &&
+                    bl.borrowLend.createdBy?.email === session?.user?.email) ||
+
+                // Case 2: You are participant in a LEND
+                (bl.borrowLend.type === 'LEND' &&
+                    bl.user?.email === session?.user?.email)
             )
         ),
         'owed'
-    )
+    );
 
     const owedToMeGrouped = groupBalancesByPerson(
         balances.owedToMeExpenses.concat(
             balances.borrowLends.filter((bl: any) =>
-                // you created a LEND, so they owe you
-                bl.borrowLend.type === 'LEND' &&
-                bl.borrowLend.createdBy?.email === session?.user?.email
+                // Case 1: You created a LEND
+                (bl.borrowLend.type === 'LEND' &&
+                    bl.borrowLend.createdBy?.email === session?.user?.email) ||
+
+                // Case 2: You are participant in a BORROW
+                (bl.borrowLend.type === 'BORROW' &&
+                    bl.user?.email === session?.user?.email)
             )
         ),
         'owedToMe'
-    )
-
+    );
 
 
     return (
