@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -39,7 +39,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -64,13 +64,23 @@ export async function POST(request: NextRequest) {
     })
 
     if (!contactUser) {
+      // Create user without authentication data - they can sign in later
       contactUser = await prisma.user.create({
         data: {
           email,
-          name: nickname || email,
+          name: nickname || email.split('@')[0], // Use part before @ as default name
           nickname,
+          // Don't set emailVerified - this will be set when they actually sign in
         },
       })
+    } else {
+      // Update nickname if user already exists
+      if (nickname && contactUser.nickname !== nickname) {
+        contactUser = await prisma.user.update({
+          where: { id: contactUser.id },
+          data: { nickname }
+        })
+      }
     }
 
     // Create or update contact

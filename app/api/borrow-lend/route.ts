@@ -91,10 +91,11 @@ export async function POST(request: NextRequest) {
                 })
 
                 if (!participantUser) {
+                    // Create user without authentication data
                     participantUser = await prisma.user.create({
                         data: {
                             email: participant.email,
-                            name: participant.nickname || participant.email,
+                            name: participant.nickname || participant.email.split('@')[0],
                             nickname: participant.nickname,
                         },
                     })
