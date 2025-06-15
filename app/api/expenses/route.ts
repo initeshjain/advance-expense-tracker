@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -87,17 +87,7 @@ export async function POST(request: NextRequest) {
     if (isSplit && participants && participants.length > 0) {
       const shareAmount = parseFloat(amount) / (participants.length + 1) // +1 for creator
 
-      // Add creator as participant
-      await prisma.expenseParticipant.create({
-        data: {
-          expenseId: expense.id,
-          userId: user.id,
-          shareAmount,
-          isPaid: true, // Creator is considered paid
-        },
-      })
-
-      // Add other participants
+      // Add other participants (creator is not added as participant in split expenses)
       for (const participant of participants) {
         let participantUser = await prisma.user.findUnique({
           where: { email: participant.email }
@@ -120,6 +110,24 @@ export async function POST(request: NextRequest) {
             userId: participantUser.id,
             shareAmount,
             isPaid: false,
+          },
+        })
+
+        // Save as contact
+        await prisma.contact.upsert({
+          where: {
+            savedById_userId: {
+              savedById: user.id,
+              userId: participantUser.id,
+            }
+          },
+          update: {
+            nickname: participant.nickname,
+          },
+          create: {
+            savedById: user.id,
+            userId: participantUser.id,
+            nickname: participant.nickname,
           },
         })
       }

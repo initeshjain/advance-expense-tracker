@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -13,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Plus, X, UserPlus } from 'lucide-react'
+import { Plus, X, UserPlus, Users } from 'lucide-react'
 import { toast } from 'sonner'
+import { ScrollArea, ScrollAreaScrollbar } from '@radix-ui/react-scroll-area'
 
 const expenseSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -35,6 +36,17 @@ interface Category {
   color: string
 }
 
+interface Contact {
+  id: string
+  nickname?: string
+  user: {
+    id: string
+    name: string
+    email: string
+    image?: string
+  }
+}
+
 interface Participant {
   email: string
   nickname?: string
@@ -44,22 +56,28 @@ interface ExpenseFormProps {
   categories: Category[]
   onExpenseCreated: () => void
   onCategoryCreated: () => void
+  expense?: any
+  onExpenseUpdated?: () => void
 }
 
-export function ExpenseForm({ categories, onExpenseCreated, onCategoryCreated }: ExpenseFormProps) {
+export function ExpenseForm({ categories, onExpenseCreated, onCategoryCreated, expense, onExpenseUpdated }: ExpenseFormProps) {
   const [participants, setParticipants] = useState<Participant[]>([])
+  const [contacts, setContacts] = useState<Contact[]>([])
   const [newParticipant, setNewParticipant] = useState({ email: '', nickname: '' })
   const [isAddingCategory, setIsAddingCategory] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [showContacts, setShowContacts] = useState(false)
+
+  const isEditing = !!expense
 
   const form = useForm<z.infer<typeof expenseSchema>>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
-      title: '',
-      description: '',
-      amount: '',
-      categoryId: '',
-      isSplit: false,
+      title: expense?.title || '',
+      description: expense?.description || '',
+      amount: expense?.amount?.toString() || '',
+      categoryId: expense?.categoryId || '',
+      isSplit: expense?.isSplit || false,
     },
   })
 
@@ -71,10 +89,35 @@ export function ExpenseForm({ categories, onExpenseCreated, onCategoryCreated }:
     },
   })
 
+  useEffect(() => {
+    fetchContacts()
+  }, [])
+
+  const fetchContacts = async () => {
+    try {
+      const response = await fetch('/api/contacts')
+      if (response.ok) {
+        const data = await response.json()
+        setContacts(data)
+      }
+    } catch (error) {
+      console.error('Error fetching contacts:', error)
+    }
+  }
+
   const addParticipant = () => {
     if (newParticipant.email && !participants.some(p => p.email === newParticipant.email)) {
       setParticipants([...participants, { ...newParticipant }])
       setNewParticipant({ email: '', nickname: '' })
+    }
+  }
+
+  const addContactAsParticipant = (contact: Contact) => {
+    if (!participants.some(p => p.email === contact.user.email)) {
+      setParticipants([...participants, {
+        email: contact.user.email,
+        nickname: contact.nickname || contact.user.name
+      }])
     }
   }
 
@@ -85,8 +128,11 @@ export function ExpenseForm({ categories, onExpenseCreated, onCategoryCreated }:
   const onSubmit = async (values: z.infer<typeof expenseSchema>) => {
     try {
       setLoading(true)
-      const response = await fetch('/api/expenses', {
-        method: 'POST',
+      const url = isEditing ? `/api/expenses/${expense.id}` : '/api/expenses'
+      const method = isEditing ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -97,15 +143,19 @@ export function ExpenseForm({ categories, onExpenseCreated, onCategoryCreated }:
       })
 
       if (response.ok) {
-        onExpenseCreated()
+        if (isEditing) {
+          onExpenseUpdated?.()
+        } else {
+          onExpenseCreated()
+        }
         form.reset()
         setParticipants([])
       } else {
-        throw new Error('Failed to create expense')
+        throw new Error(`Failed to ${isEditing ? 'update' : 'create'} expense`)
       }
     } catch (error) {
-      console.error('Error creating expense:', error)
-      toast.error('Failed to create expense')
+      console.error(`Error ${isEditing ? 'updating' : 'creating'} expense:`, error)
+      toast.error(`Failed to ${isEditing ? 'update' : 'create'} expense`)
     } finally {
       setLoading(false)
     }
@@ -136,10 +186,12 @@ export function ExpenseForm({ categories, onExpenseCreated, onCategoryCreated }:
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-y-scroll max-h-[80vh]">
       <div>
-        <h2 className="text-2xl font-bold">Add New Expense</h2>
-        <p className="text-muted-foreground">Create a new expense and optionally split it with others.</p>
+        <h2 className="text-2xl font-bold">{isEditing ? 'Edit Expense' : 'Add New Expense'}</h2>
+        <p className="text-muted-foreground">
+          {isEditing ? 'Update your expense details.' : 'Create a new expense and optionally split it with others.'}
+        </p>
       </div>
 
       <Form {...form}>
@@ -204,8 +256,8 @@ export function ExpenseForm({ categories, onExpenseCreated, onCategoryCreated }:
                         {categories.map((category) => (
                           <SelectItem key={category.id} value={category.id}>
                             <div className="flex items-center gap-2">
-                              <div 
-                                className="w-3 h-3 rounded-full" 
+                              <div
+                                className="w-3 h-3 rounded-full"
                                 style={{ backgroundColor: category.color }}
                               />
                               {category.name}
@@ -266,28 +318,30 @@ export function ExpenseForm({ categories, onExpenseCreated, onCategoryCreated }:
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="isSplit"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Split this expense</FormLabel>
-                  <p className="text-sm text-muted-foreground">
-                    Share this expense with other people
-                  </p>
-                </div>
-              </FormItem>
-            )}
-          />
+          {!isEditing && (
+            <FormField
+              control={form.control}
+              name="isSplit"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Split this expense</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Share this expense with other people
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+          )}
 
-          {form.watch('isSplit') && (
+          {form.watch('isSplit') && !isEditing && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Split With</CardTitle>
@@ -296,6 +350,40 @@ export function ExpenseForm({ categories, onExpenseCreated, onCategoryCreated }:
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowContacts(!showContacts)}
+                    className="flex-1"
+                  >
+                    <Users className="w-4 h-4 mr-2" />
+                    {showContacts ? 'Hide Contacts' : 'Show My Contacts'}
+                  </Button>
+                </div>
+
+                {showContacts && contacts.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Select from contacts</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                      {contacts.map((contact) => (
+                        <Button
+                          key={contact.id}
+                          type="button"
+                          variant="ghost"
+                          className="justify-start h-auto p-2"
+                          onClick={() => addContactAsParticipant(contact)}
+                        >
+                          <div className="text-left">
+                            <p className="font-medium">{contact.nickname || contact.user.name}</p>
+                            <p className="text-xs text-muted-foreground">{contact.user.email}</p>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <Input
                     placeholder="Email address"
@@ -343,7 +431,7 @@ export function ExpenseForm({ categories, onExpenseCreated, onCategoryCreated }:
           )}
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Creating...' : 'Create Expense'}
+            {loading ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Expense' : 'Create Expense')}
           </Button>
         </form>
       </Form>

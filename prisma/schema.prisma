@@ -51,6 +51,14 @@ model User {
   createdExpenses    Expense[] @relation("ExpenseCreator")
   expenseParticipants ExpenseParticipant[]
   
+  // Contact relationships
+  savedContacts Contact[] @relation("ContactSaver")
+  contactOf     Contact[] @relation("ContactUser")
+  
+  // Borrow/Lend relationships
+  createdBorrowLends BorrowLend[] @relation("BorrowLendCreator")
+  borrowLendParticipants BorrowLendParticipant[]
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -64,6 +72,23 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model Contact {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  
+  savedById String @db.ObjectId
+  savedBy   User   @relation("ContactSaver", fields: [savedById], references: [id])
+  
+  userId    String @db.ObjectId
+  user      User   @relation("ContactUser", fields: [userId], references: [id])
+  
+  nickname  String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([savedById, userId])
+}
+
 model Category {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   name        String    @unique
@@ -71,6 +96,7 @@ model Category {
   isDefault   Boolean   @default(false)
   createdBy   String?   @db.ObjectId
   expenses    Expense[]
+  borrowLends BorrowLend[]
   
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -117,11 +143,41 @@ model ExpenseParticipant {
   @@unique([expenseId, userId])
 }
 
-model PendingUser {
-  id        String @id @default(auto()) @map("_id") @db.ObjectId
-  email     String @unique
-  nickname  String?
+model BorrowLend {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+  amount      Float
+  currency    String   @default("INR")
+  type        String   // "BORROW" or "LEND"
   
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Relationships
+  categoryId  String   @db.ObjectId
+  category    Category @relation(fields: [categoryId], references: [id])
+  
+  createdById String   @db.ObjectId
+  createdBy   User     @relation("BorrowLendCreator", fields: [createdById], references: [id])
+  
+  participants BorrowLendParticipant[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model BorrowLendParticipant {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  
+  borrowLendId String     @db.ObjectId
+  borrowLend   BorrowLend @relation(fields: [borrowLendId], references: [id], onDelete: Cascade)
+  
+  userId       String     @db.ObjectId
+  user         User       @relation(fields: [userId], references: [id])
+  
+  amount       Float
+  isSettled    Boolean    @default(false)
+  
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  @@unique([borrowLendId, userId])
 }
