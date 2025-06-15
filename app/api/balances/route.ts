@@ -73,6 +73,7 @@ export async function GET() {
             include: {
                 borrowLend: {
                     include: {
+                        category: true,
                         createdBy: {
                             select: { name: true, email: true }
                         }
@@ -85,21 +86,24 @@ export async function GET() {
         })
 
         // Calculate totals
-        const totalOwed = owedExpenses.reduce((sum, participant) => sum + participant.shareAmount, 0) +
+        const totalOwed =
+            owedExpenses.reduce((sum, p) => sum + p.shareAmount, 0) +
             borrowLends
-                .filter(bl => bl.userId === user.id && bl.borrowLend.type === 'BORROW')
-                .reduce((sum, bl) => sum + bl.amount, 0) +
-            borrowLends
-                .filter(bl => bl.borrowLend.createdById === user.id && bl.borrowLend.type === 'LEND')
-                .reduce((sum, bl) => sum + bl.amount, 0)
+                .filter(bl =>
+                    bl.borrowLend.type === 'BORROW' &&
+                    bl.borrowLend.createdById === user.id
+                )
+                .reduce((sum, bl) => sum + bl.amount, 0);
 
-        const totalOwedToMe = owedToMeExpenses.reduce((sum, participant) => sum + participant.shareAmount, 0) +
+        const totalOwedToMe =
+            owedToMeExpenses.reduce((sum, p) => sum + p.shareAmount, 0) +
             borrowLends
-                .filter(bl => bl.userId === user.id && bl.borrowLend.type === 'LEND')
-                .reduce((sum, bl) => sum + bl.amount, 0) +
-            borrowLends
-                .filter(bl => bl.borrowLend.createdById === user.id && bl.borrowLend.type === 'BORROW')
-                .reduce((sum, bl) => sum + bl.amount, 0)
+                .filter(bl =>
+                    bl.borrowLend.type === 'LEND' &&
+                    bl.borrowLend.createdById === user.id
+                )
+                .reduce((sum, bl) => sum + bl.amount, 0);
+
 
         return NextResponse.json({
             totalOwed,

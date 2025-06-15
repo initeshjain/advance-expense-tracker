@@ -222,9 +222,9 @@ export function Dashboard() {
           <div className="flex gap-2">
             <Dialog open={isExpenseFormOpen} onOpenChange={setIsExpenseFormOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Expense
+                <Button>
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-2">Add Expense</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
@@ -239,7 +239,7 @@ export function Dashboard() {
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <Handshake className="w-4 h-4 mr-2" />
-                  Borrow/Lend
+                  <span className="hidden sm:inline ml-2">Borrow/Lend</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">

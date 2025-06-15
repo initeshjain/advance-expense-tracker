@@ -371,8 +371,8 @@ export default function BalancesPage() {
                                                 variant="secondary"
                                                 className="text-xs"
                                                 style={{
-                                                    backgroundColor: `${item.category.color}20`,
-                                                    color: item.category.color
+                                                    backgroundColor: `${item.category?.color}20`,
+                                                    color: item.category?.color
                                                 }}
                                             >
                                                 {item.category?.name}
@@ -458,19 +458,31 @@ export default function BalancesPage() {
         )
     }
 
-    const owedGrouped = groupBalancesByPerson(balances.owedExpenses.concat(
-        balances.borrowLends.filter((bl: any) =>
-            (bl.userId === session?.user?.id && bl.borrowLend.type === 'BORROW') ||
-            (bl.borrowLend.createdById === session?.user?.id && bl.borrowLend.type === 'LEND')
-        )
-    ), 'owed')
+    console.log('balances raw:', balances)
 
-    const owedToMeGrouped = groupBalancesByPerson(balances.owedToMeExpenses.concat(
-        balances.borrowLends.filter((bl: any) =>
-            (bl.userId === session?.user?.id && bl.borrowLend.type === 'LEND') ||
-            (bl.borrowLend.createdById === session?.user?.id && bl.borrowLend.type === 'BORROW')
-        )
-    ), 'owedToMe')
+    const owedGrouped = groupBalancesByPerson(
+        balances.owedExpenses.concat(
+            balances.borrowLends.filter((bl: any) =>
+                // you created a BORROW, so you owe
+                bl.borrowLend.type === 'BORROW' &&
+                bl.borrowLend.createdBy?.email === session?.user?.email
+            )
+        ),
+        'owed'
+    )
+
+    const owedToMeGrouped = groupBalancesByPerson(
+        balances.owedToMeExpenses.concat(
+            balances.borrowLends.filter((bl: any) =>
+                // you created a LEND, so they owe you
+                bl.borrowLend.type === 'LEND' &&
+                bl.borrowLend.createdBy?.email === session?.user?.email
+            )
+        ),
+        'owedToMe'
+    )
+
+
 
     return (
         <div className="min-h-screen bg-gray-50">
